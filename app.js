@@ -40,6 +40,56 @@ document.getElementById("printButton").addEventListener("click", () => {
   window.print();
 });
 
+const capacityData = {
+  small: {
+    corpus: "8 mil. tokenů",
+    delta: "0,4 mil. tokenů",
+    storage: "25–75 GB",
+    initial: "2–8 h",
+    db: "4 vCPU · 16 GB RAM",
+    workers: "4–8 vCPU · 16–32 GB RAM",
+    search: "volitelně 2 × 4 vCPU / 16 GB",
+    gpu: "0 GPU v MVP",
+    gpuHours: "později 2–10 GPU h / měsíc",
+  },
+  medium: {
+    corpus: "40 mil. tokenů",
+    delta: "2 mil. tokenů",
+    storage: "100–300 GB",
+    initial: "8–24 h",
+    db: "4–8 vCPU · 16–32 GB RAM",
+    workers: "8–16 vCPU · 32–64 GB RAM",
+    search: "2 × 8 vCPU / 32 GB",
+    gpu: "1 sdílená GPU 24–48 GB",
+    gpuHours: "10–50 GPU h / měsíc",
+  },
+  large: {
+    corpus: "160 mil. tokenů",
+    delta: "8 mil. tokenů",
+    storage: "0,4–1,2 TB",
+    initial: "1–3 dny",
+    db: "8–16 vCPU · 32–64 GB RAM",
+    workers: "16–32 vCPU · 64–128 GB RAM",
+    search: "3 × 8 vCPU / 32 GB",
+    gpu: "1–2 GPU 48–80 GB",
+    gpuHours: "40–200 GPU h / měsíc",
+  },
+};
+
+document.querySelectorAll(".scale-button").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll(".scale-button").forEach((item) => {
+      item.classList.toggle("active", item === button);
+    });
+
+    const values = capacityData[button.dataset.scale];
+    document.querySelectorAll("[data-capacity]").forEach((element) => {
+      const value = values[element.dataset.capacity];
+      if (value) element.textContent = value;
+    });
+  });
+});
+
 const sidebarLinks = [...document.querySelectorAll("[data-section]")];
 const observedSections = sidebarLinks
   .map((link) => document.getElementById(link.dataset.section))
