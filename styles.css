@@ -281,6 +281,108 @@ h1 {
   font-size: 13px;
 }
 
+.concept-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.7fr);
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.concept-copy,
+.walkthrough {
+  padding: 25px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.concept-label {
+  color: var(--green);
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.concept-copy h2 {
+  margin: 11px 0 19px;
+  font-size: 25px;
+  letter-spacing: -0.035em;
+}
+
+.concept-copy p {
+  margin: 0 0 14px;
+  color: #505b62;
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.concept-copy p:last-child {
+  margin-bottom: 0;
+}
+
+.walkthrough {
+  align-self: stretch;
+  background: var(--code);
+  border-color: var(--code);
+}
+
+.walkthrough .concept-label {
+  color: #86c7a4;
+}
+
+.walkthrough ol {
+  margin: 19px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.walkthrough li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 29px 1fr;
+  gap: 10px;
+  min-height: 64px;
+}
+
+.walkthrough li:not(:last-child)::after {
+  position: absolute;
+  top: 27px;
+  bottom: 4px;
+  left: 12px;
+  width: 1px;
+  content: "";
+  background: #41494d;
+}
+
+.walkthrough li > span {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  align-self: start;
+  width: 25px;
+  height: 25px;
+  color: #aab4b8;
+  background: #2e3539;
+  border: 1px solid #485156;
+  border-radius: 50%;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 7px;
+}
+
+.walkthrough li:last-child > span {
+  color: #10241c;
+  background: #86c7a4;
+  border-color: #86c7a4;
+}
+
+.walkthrough p {
+  margin: 2px 0 0;
+  color: #c5cccf;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
 .scope-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -1434,6 +1536,7 @@ footer p {
   }
 
   .summary-box,
+  .concept-intro,
   .scope-grid,
   .two-columns,
   .component-grid,
@@ -1451,6 +1554,11 @@ footer p {
 
   .summary-box {
     gap: 8px;
+  }
+
+  .concept-copy,
+  .walkthrough {
+    padding: 20px;
   }
 
   .load-conclusion,
