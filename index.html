@@ -82,6 +82,78 @@
             </p>
           </div>
 
+          <div class="concept-intro">
+            <div class="concept-copy">
+              <span class="concept-label">MYŠLENKA V KUSE</span>
+              <h2>Jak by to celé mohlo fungovat</h2>
+              <p>
+                Smyslem není vytvořit model, který si má „pamatovat všechno o hypotékách“.
+                Potřebujeme systém, který průběžně sleduje vybrané zdroje a umí z nich
+                spolehlivě poznat, co je nové. Zdrojem může být interní výzkum, performance
+                report, produktová dokumentace, nabídka konkurence nebo jiný schválený
+                materiál. Systém si vždy uloží originál, jeho verzi, vlastníka a přístupová
+                práva, takže nic důležitého nezůstane pouze v odpovědi modelu.
+              </p>
+              <p>
+                Po načtení se dokument technicky vyčistí: odstraní se navigace a duplicity,
+                vytáhne se text a tabulky a obsah se rozdělí do smysluplných sekcí. Z těchto
+                sekcí se získají konkrétní fakta, například cena, doba zpracování, podporovaný
+                způsob podpisu nebo výsledek klientského výzkumu. Jednoduché údaje vytáhnou
+                pravidla a parsery. AI se použije jen u textu, kde jsou pravidla nepraktická,
+                a i tehdy musí vrátit pevně danou strukturu společně s přesnou citací.
+              </p>
+              <p>
+                Ověřená fakta se ukládají do databáze, ne do modelu. Každé má platnost,
+                historii a vazbu na původní dokument. Nad nimi běží obyčejný, verzovaný
+                výpočet benchmarku. Díky tomu lze vždy říct, ze kterých hodnot výsledná
+                metrika vznikla, podle jakých vah se počítala a proč se proti minulému
+                období změnila.
+              </p>
+              <p>
+                Dashboard potom neukazuje „názor AI“, ale vypočítané metriky, změny a jejich
+                podklady. Periodický report pracuje jen s informacemi, které přibyly nebo se
+                změnily. AI může z těchto hotových výsledků navrhnout slovní komentář, ale
+                není zdrojem čísel ani finální rozhodovací autoritou.
+              </p>
+              <p>
+                První verze může fungovat úplně bez generativní AI: několik zdrojů, ručně
+                nebo pravidly získaná fakta, deset až dvacet metrik a jednoduchý dashboard.
+                Teprve až bude jasné, kde vzniká nejvíc ruční práce, má smysl přidat lokální
+                model na konkrétní a měřitelný krok.
+              </p>
+            </div>
+
+            <aside class="walkthrough">
+              <span class="concept-label">PŘÍKLAD JEDNOHO PRŮCHODU</span>
+              <ol>
+                <li>
+                  <span>01</span>
+                  <p>Konkurence zveřejní novou produktovou podmínku.</p>
+                </li>
+                <li>
+                  <span>02</span>
+                  <p>Konektor pozná změnu, uloží nový originál a předchozí verzi zachová.</p>
+                </li>
+                <li>
+                  <span>03</span>
+                  <p>Parser najde pasáž „nabídka do 2,5 dne“ a uloží ji jako sekci.</p>
+                </li>
+                <li>
+                  <span>04</span>
+                  <p>Pravidlo nebo AI vytvoří kandidátní fakt včetně přesné citace.</p>
+                </li>
+                <li>
+                  <span>05</span>
+                  <p>Validace fakt schválí a benchmark přepočítá metriku rychlosti.</p>
+                </li>
+                <li>
+                  <span>06</span>
+                  <p>Dashboard ukáže změnu, její dopad a odkaz na původní dokument.</p>
+                </li>
+              </ol>
+            </aside>
+          </div>
+
           <div class="scope-grid">
             <article>
               <span class="scope-label green">STAVÍME</span>
