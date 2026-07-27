@@ -22,7 +22,8 @@
         <a href="#architektura">Architektura</a>
         <a href="#data">Data</a>
         <a href="#prace">Práce</a>
-        <a href="#mvp">MVP</a>
+        <a href="#vykon">Výkon</a>
+        <a href="#varianty">Varianty</a>
         <a href="#otazky">Otázky</a>
       </nav>
       <div class="header-actions">
@@ -42,7 +43,9 @@
           <a href="#prace" data-section="prace">04 Balíky práce</a>
           <a href="#mvp" data-section="mvp">05 Hranice MVP</a>
           <a href="#provoz" data-section="provoz">06 Provoz na OCP</a>
-          <a href="#otazky" data-section="otazky">07 Otevřené otázky</a>
+          <a href="#vykon" data-section="vykon">07 Výkon a kapacita</a>
+          <a href="#varianty" data-section="varianty">08 Model-first varianta</a>
+          <a href="#otazky" data-section="otazky">09 Otevřené otázky</a>
         </div>
 
         <div class="sidebar-block">
@@ -67,7 +70,7 @@
           <h1>Co je potřeba postavit</h1>
           <p class="lead">
             Pracovní rozpad systému pro sběr podkladů, výpočet hypotečního benchmarku
-            a periodický report. Není to finální architektura ani odhad pracnosti.
+            a periodický report. Není to finální architektura ani závazný rozpočet.
           </p>
 
           <div class="summary-box">
@@ -656,9 +659,293 @@
           </div>
         </section>
 
-        <section id="otazky">
+        <section id="vykon">
           <div class="section-title">
             <span>07</span>
+            <div>
+              <h2>Výkon a kapacita</h2>
+              <p>Řádový sizing pro batch pipeline. Nejde o benchmark konkrétního OCP clusteru.</p>
+            </div>
+          </div>
+
+          <div class="estimate-assumptions">
+            <strong>Modelový vstup</strong>
+            <span>8 000 tokenů / dokument</span>
+            <span>5 % dokumentů změněných měsíčně</span>
+            <span>2–3 verze dokumentu v retention</span>
+            <span>1 kvartální report</span>
+          </div>
+
+          <div class="scale-switch" aria-label="Velikost datové sady">
+            <span>Počet dokumentů:</span>
+            <button class="scale-button active" data-scale="small" type="button">1 000</button>
+            <button class="scale-button" data-scale="medium" type="button">5 000</button>
+            <button class="scale-button" data-scale="large" type="button">20 000</button>
+          </div>
+
+          <div class="capacity-grid">
+            <article>
+              <span>CELÝ KORPUS</span>
+              <strong data-capacity="corpus">8 mil. tokenů</strong>
+              <p>Objem textu po parsování. Do jednoho promptu se neposílá.</p>
+            </article>
+            <article>
+              <span>MĚSÍČNÍ ZMĚNA</span>
+              <strong data-capacity="delta">0,4 mil. tokenů</strong>
+              <p>Maximální text, který může potřebovat nové AI zpracování.</p>
+            </article>
+            <article>
+              <span>STORAGE</span>
+              <strong data-capacity="storage">25–75 GB</strong>
+              <p>Originály, verze, parsed text, DB a provozní rezerva.</p>
+            </article>
+            <article>
+              <span>PRVNÍ IMPORT</span>
+              <strong data-capacity="initial">2–8 h</strong>
+              <p>CPU parsing a normalizace s paralelními workery.</p>
+            </article>
+          </div>
+
+          <div class="resource-table-wrap">
+            <table class="resource-table">
+              <thead>
+                <tr>
+                  <th>Část</th>
+                  <th>Doporučený request</th>
+                  <th>Reálné zatížení</th>
+                  <th>Poznámka</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>backend + frontend</code></td>
+                  <td>2–4 vCPU · 4–8 GB RAM</td>
+                  <td>nízké, převážně čtení</td>
+                  <td>2 repliky kvůli dostupnosti, ne výkonu</td>
+                </tr>
+                <tr>
+                  <td><code>PostgreSQL</code></td>
+                  <td data-capacity="db">4 vCPU · 16 GB RAM</td>
+                  <td>nižší desítky GB dat</td>
+                  <td>běžná relační DB, žádný analytický cluster</td>
+                </tr>
+                <tr>
+                  <td><code>ingest workers</code></td>
+                  <td data-capacity="workers">4–8 vCPU · 16–32 GB RAM</td>
+                  <td>špička při dávce, jinak nula</td>
+                  <td>joby se po dokončení vypnou</td>
+                </tr>
+                <tr>
+                  <td><code>OpenSearch</code></td>
+                  <td data-capacity="search">volitelně 2 × 4 vCPU / 16 GB</td>
+                  <td>fulltext, ne výpočet KPI</td>
+                  <td>v MVP lze nahradit PostgreSQL fulltextem</td>
+                </tr>
+                <tr>
+                  <td><code>AI extraction</code></td>
+                  <td data-capacity="gpu">0 GPU v MVP</td>
+                  <td data-capacity="gpuHours">později 2–10 GPU h / měsíc</td>
+                  <td>sdílená 24–48GB GPU stačí pro 8–14B model</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="load-conclusion">
+            <strong>Závěr pro očekávaný objem</strong>
+            <p>
+              Samotný benchmark je malá až střední interní aplikace. Výpočetně drahá
+              část vznikne až ve chvíli, kdy se každý dokument začne znovu posílat do
+              velkého modelu. Bez toho není potřeba Spark, Kafka ani trvale běžící GPU.
+            </p>
+          </div>
+
+          <div class="cost-envelope">
+            <article>
+              <span>IMPLEMENTACE MVP</span>
+              <strong>8–14 člověkoměsíců</strong>
+              <p>Backend/data, frontend, platform práce a část analytika. Bez AI workeru.</p>
+            </article>
+            <article>
+              <span>HRUBÝ NÁKLAD MVP</span>
+              <strong>1,4–4,2 mil. Kč</strong>
+              <p>Při modelové plné sazbě 180–300 tis. Kč za člověkoměsíc.</p>
+            </article>
+            <article>
+              <span>PROVOZ BEZ DEDIKOVANÉ GPU</span>
+              <strong>0,2–0,8 mil. Kč / rok</strong>
+              <p>Inkrementální náklad při využití existujícího OCP, DB, storage a monitoringu.</p>
+            </article>
+          </div>
+
+          <p class="estimate-disclaimer">
+            Odhad nezahrnuje cenu již existující OCP platformy, interní schvalování,
+            nákup dat, právní posouzení ani odstranění problémů ve zdrojových systémech.
+            Rozptyl je záměrně široký; největší neznámá není objem dat, ale počet a kvalita konektorů.
+          </p>
+        </section>
+
+        <section id="varianty">
+          <div class="section-title">
+            <span>08</span>
+            <div>
+              <h2>Co může znamenat „natrénujeme model“</h2>
+              <p>Tři technicky odlišné varianty, které se v zadání často schovají pod stejnou větu.</p>
+            </div>
+          </div>
+
+          <div class="variant-summary">
+            <article class="recommended">
+              <span class="variant-badge">DOPORUČENO</span>
+              <h3>Datová pipeline + malý AI worker</h3>
+              <p>
+                Fakta jsou v databázi, KPI počítá kód. Model zpracuje jen nové
+                nestrukturované pasáže a jeho výstup je kontrolovatelný.
+              </p>
+              <dl>
+                <div><dt>Dodání</dt><dd>8–14 PM</dd></div>
+                <div><dt>GPU</dt><dd>žádná v MVP</dd></div>
+                <div><dt>Riziko</dt><dd>střední</dd></div>
+              </dl>
+            </article>
+            <article>
+              <span class="variant-badge">VARIANTA A</span>
+              <h3>RAG/chat nad všemi dokumenty</h3>
+              <p>
+                Dokumenty se nasekají do vektorového indexu a model z nalezených
+                pasáží odpovídá. Použitelné pro hledání, nikoli jako benchmark.
+              </p>
+              <dl>
+                <div><dt>Dodání</dt><dd>12–24 PM</dd></div>
+                <div><dt>GPU</dt><dd>1–2 × 48–80 GB</dd></div>
+                <div><dt>Riziko</dt><dd>vysoké</dd></div>
+              </dl>
+            </article>
+            <article class="danger">
+              <span class="variant-badge">VARIANTA B</span>
+              <h3>Fine-tuning velkého LLM</h3>
+              <p>
+                Existující 70B model se dotrénuje na interních materiálech s představou,
+                že si fakta „zapamatuje“. Na měnící se znalosti to není spolehlivý mechanismus.
+              </p>
+              <dl>
+                <div><dt>Dodání</dt><dd>25–50 PM</dd></div>
+                <div><dt>GPU</dt><dd>2–8 × 80 GB</dd></div>
+                <div><dt>Riziko</dt><dd>velmi vysoké</dd></div>
+              </dl>
+            </article>
+            <article class="danger">
+              <span class="variant-badge">VARIANTA C</span>
+              <h3>Vlastní model od nuly</h3>
+              <p>
+                Sběr trénovacích dat, pretraining, alignment, eval, serving a vlastní
+                modelový tým. To už není hypoteční benchmark, ale samostatná AI firma.
+              </p>
+              <dl>
+                <div><dt>Dodání</dt><dd>80+ PM</dd></div>
+                <div><dt>GPU</dt><dd>desítky až stovky</dd></div>
+                <div><dt>Riziko</dt><dd>neobhajitelné</dd></div>
+              </dl>
+            </article>
+          </div>
+
+          <div class="comparison-wrap">
+            <table class="comparison-table">
+              <thead>
+                <tr>
+                  <th>Varianta</th>
+                  <th>Hrubý náklad dodání</th>
+                  <th>Infra / provoz</th>
+                  <th>Co je reálně potřeba</th>
+                  <th>Co dostaneme</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="comparison-good">
+                  <td><strong>Pipeline + AI worker</strong></td>
+                  <td>1,4–4,2 mil. Kč</td>
+                  <td>0,2–0,8 mil. Kč / rok</td>
+                  <td>2–3 vývojáři, analytik, běžné OCP služby</td>
+                  <td>auditovatelný benchmark a report</td>
+                </tr>
+                <tr>
+                  <td><strong>RAG/chat nad korpusem</strong></td>
+                  <td>2,2–7,2 mil. Kč</td>
+                  <td>0,8–2,5 mil. Kč / rok</td>
+                  <td>retrieval pipeline, eval tým, model gateway, GPU serving</td>
+                  <td>vyhledávání a odpovědi, ne stabilní KPI</td>
+                </tr>
+                <tr class="comparison-bad">
+                  <td><strong>Fine-tuned 70B model</strong></td>
+                  <td>4,5–15 mil. Kč + 3–10 mil. hardware</td>
+                  <td>1–4 mil. Kč / rok</td>
+                  <td>ML tým, 2–8 high-end GPU, dataset, eval, opakovaný tuning</td>
+                  <td>lepší styl/doménový jazyk; ne spolehlivou databázi faktů</td>
+                </tr>
+                <tr class="comparison-bad">
+                  <td><strong>Model od nuly</strong></td>
+                  <td>desítky až stovky mil. Kč</td>
+                  <td>5–20+ mil. Kč / rok</td>
+                  <td>specializovaný tým, rozsáhlý dataset, GPU cluster, měsíce experimentů</td>
+                  <td>horší model než dostupné open-source základy</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="risk-grid">
+            <article>
+              <span>01</span>
+              <h3>Znalosti rychle zastarají</h3>
+              <p>Fakta uložená ve vahách nejdou cíleně opravit. Změna produktu znamená nový dataset a další tuning.</p>
+            </article>
+            <article>
+              <span>02</span>
+              <h3>Výsledek není reprodukovatelný</h3>
+              <p>Stejný prompt může vrátit jinou známku. Nelze obhájit, proč má KPI právě danou hodnotu.</p>
+            </article>
+            <article>
+              <span>03</span>
+              <h3>Eval je větší práce než demo</h3>
+              <p>Bez ručně označených případů nelze měřit halucinace, recall ani regresi po změně modelu.</p>
+            </article>
+            <article>
+              <span>04</span>
+              <h3>GPU je trvalý provozní závazek</h3>
+              <p>Kapacita, ovladače, model server, observabilita, kvóty a upgrade modelu potřebují vlastníka.</p>
+            </article>
+            <article>
+              <span>05</span>
+              <h3>ACL se snadno obejde</h3>
+              <p>Model nebo společný index může odvodit obsah zdroje uživateli, který k němu nemá přístup.</p>
+            </article>
+            <article>
+              <span>06</span>
+              <h3>Drahá cesta bez správného výstupu</h3>
+              <p>Chat může vypadat působivě, ale stále neřeší metodiku, kvalitu dat ani deterministický benchmark.</p>
+            </article>
+          </div>
+
+          <div class="bottom-line">
+            <strong>Praktický verdikt</strong>
+            <p>
+              RAG lze později přidat jako vyhledávací rozhraní. Fine-tuning má smysl
+              jen pro úzkou a měřitelnou úlohu, ne pro ukládání aktuálních faktů.
+              Trénování vlastního modelu od nuly je pro tento problém ekonomicky i technicky mimo realitu.
+            </p>
+          </div>
+
+          <p class="estimate-disclaimer">
+            Nákladové rozsahy používají stejnou modelovou sazbu 180–300 tis. Kč za
+            člověkoměsíc a běžné řádové ceny on-prem GPU infrastruktury. Nejde o nabídku
+            dodavatele. Reálnou cenu výrazně ovlivní interní platforma, procurement,
+            bezpečnostní požadavky a dostupnost sdíleného GPU clusteru.
+          </p>
+        </section>
+
+        <section id="otazky">
+          <div class="section-title">
+            <span>09</span>
             <div>
               <h2>Co je potřeba zjistit</h2>
               <p>Bez těchto odpovědí nelze návrh převést na konkrétní implementaci.</p>
