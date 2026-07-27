@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Technický rozpad implementace HypoBenchmarku pro lokální OCP."
+    />
+    <meta name="theme-color" content="#161a1d" />
+    <title>HypoBenchmark — technický rozpad</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#uvod">
+        <span class="brand-icon">H</span>
+        <span>HypoBenchmark</span>
+        <code>technical draft</code>
+      </a>
+      <nav aria-label="Hlavní navigace">
+        <a href="#architektura">Architektura</a>
+        <a href="#data">Data</a>
+        <a href="#prace">Práce</a>
+        <a href="#mvp">MVP</a>
+        <a href="#otazky">Otázky</a>
+      </nav>
+      <div class="header-actions">
+        <button class="plain-button" id="expandAll" type="button">Rozbalit vše</button>
+        <button class="primary-button" id="printButton" type="button">Tisk / PDF</button>
+      </div>
+    </header>
+
+    <div class="page">
+      <aside class="sidebar">
+        <div class="sidebar-block">
+          <span class="sidebar-label">Obsah</span>
+          <a href="#uvod" class="active" data-section="uvod">00 Úvod</a>
+          <a href="#architektura" data-section="architektura">01 Architektura</a>
+          <a href="#data" data-section="data">02 Datový model</a>
+          <a href="#ai" data-section="ai">03 Použití AI</a>
+          <a href="#prace" data-section="prace">04 Balíky práce</a>
+          <a href="#mvp" data-section="mvp">05 Hranice MVP</a>
+          <a href="#provoz" data-section="provoz">06 Provoz na OCP</a>
+          <a href="#otazky" data-section="otazky">07 Otevřené otázky</a>
+        </div>
+
+        <div class="sidebar-block">
+          <span class="sidebar-label">Předpoklady</span>
+          <ul class="assumption-list">
+            <li><span></span>lokální OCP</li>
+            <li><span></span>10²–10³ dokumentů</li>
+            <li><span></span>batch, ne real-time</li>
+            <li><span></span>periodický report</li>
+            <li class="unknown"><span></span>internet zatím nejasný</li>
+          </ul>
+        </div>
+      </aside>
+
+      <main>
+        <section id="uvod" class="hero">
+          <div class="meta-line">
+            <span>TECHNICKÝ NÁVRH</span>
+            <span>v0.1</span>
+            <span>27. 7. 2026</span>
+          </div>
+          <h1>Co je potřeba postavit</h1>
+          <p class="lead">
+            Pracovní rozpad systému pro sběr podkladů, výpočet hypotečního benchmarku
+            a periodický report. Není to finální architektura ani odhad pracnosti.
+          </p>
+
+          <div class="summary-box">
+            <strong>Krátká verze</strong>
+            <p>
+              Jádro je běžná datová pipeline a relační databáze. AI je volitelný worker
+              pro vytěžení strukturovaných faktů z textu. Benchmark samotný musí být
+              deterministický kód, ne odpověď modelu.
+            </p>
+          </div>
+
+          <div class="scope-grid">
+            <article>
+              <span class="scope-label green">STAVÍME</span>
+              <h2>Datovou aplikaci</h2>
+              <ul class="check-list">
+                <li>konektory na zdroje</li>
+                <li>inkrementální zpracování</li>
+                <li>verzovaná fakta a metriky</li>
+                <li>dashboard + report</li>
+              </ul>
+            </article>
+            <article>
+              <span class="scope-label red">NESTAVÍME</span>
+              <h2>Vlastní AI model</h2>
+              <ul class="cross-list">
+                <li>trénování foundation modelu</li>
+                <li>chat nad celým archivem v MVP</li>
+                <li>real-time streaming</li>
+                <li>AI generované výsledné skóre</li>
+              </ul>
+            </article>
+            <article>
+              <span class="scope-label gray">ZATÍM NEVÍME</span>
+              <h2>Lokální podmínky</h2>
+              <ul class="question-list">
+                <li>povolený přístup na internet</li>
+                <li>dostupný model a GPU</li>
+                <li>standardní OCP komponenty</li>
+                <li>konkrétní zdroje a ACL</li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section id="architektura">
+          <div class="section-title">
+            <span>01</span>
+            <div>
+              <h2>Navržená architektura</h2>
+              <p>Minimální počet komponent pro první použitelnou verzi.</p>
+            </div>
+          </div>
+
+          <div class="flow">
+            <button class="flow-node" data-detail="sourceDetail" type="button">
+              <span class="node-type">INPUT</span>
+              <strong>Zdroje</strong>
+              <small>Confluence, soubory, API, web</small>
+              <code>n konektorů</code>
+            </button>
+            <span class="flow-arrow">→</span>
+            <button class="flow-node" data-detail="ingestDetail" type="button">
+              <span class="node-type">WORKER</span>
+              <strong>Ingest</strong>
+              <small>načtení pouze změn</small>
+              <code>scheduled jobs</code>
+            </button>
+            <span class="flow-arrow">→</span>
+            <button class="flow-node" data-detail="processDetail" type="button">
+              <span class="node-type">WORKER</span>
+              <strong>Processing</strong>
+              <small>parse, clean, dedupe</small>
+              <code>CPU jobs</code>
+            </button>
+            <span class="flow-arrow optional-arrow"><em>volitelně AI</em>→</span>
+            <button class="flow-node" data-detail="factsDetail" type="button">
+              <span class="node-type">DATA</span>
+              <strong>Fakta</strong>
+              <small>normalizovaný model</small>
+              <code>PostgreSQL</code>
+            </button>
+            <span class="flow-arrow">→</span>
+            <button class="flow-node" data-detail="metricDetail" type="button">
+              <span class="node-type">CODE</span>
+              <strong>Benchmark</strong>
+              <small>pravidla, váhy, historie</small>
+              <code>batch compute</code>
+            </button>
+            <span class="flow-arrow">→</span>
+            <button class="flow-node" data-detail="outputDetail" type="button">
+              <span class="node-type">OUTPUT</span>
+              <strong>Dashboard</strong>
+              <small>KPI, změny, zdroje</small>
+              <code>read-only API</code>
+            </button>
+          </div>
+
+          <div class="flow-details">
+            <article id="sourceDetail" class="flow-detail open">
+              <div><span>INPUT</span><h3>Zdroje a konektory</h3></div>
+              <ul>
+                <li>Každý typ zdroje má samostatný adaptér.</li>
+                <li>Konektor vrací obsah, metadata, ACL, source ID a čas změny.</li>
+                <li>Veřejný web musí jít vypnout bez dopadu na zbytek systému.</li>
+              </ul>
+            </article>
+            <article id="ingestDetail" class="flow-detail">
+              <div><span>WORKER</span><h3>Inkrementální ingest</h3></div>
+              <ul>
+                <li>Porovná source version nebo hash obsahu.</li>
+                <li>Originál uloží beze změny do object storage.</li>
+                <li>Nezměněné položky ukončí bez parsování a AI.</li>
+              </ul>
+            </article>
+            <article id="processDetail" class="flow-detail">
+              <div><span>WORKER</span><h3>Zpracování dokumentu</h3></div>
+              <ul>
+                <li>Parser podle MIME typu, čištění šumu a logické sekce.</li>
+                <li>Deduplikace podle hashe a podobnosti.</li>
+                <li>Neúspěšné položky skončí v karanténě s důvodem.</li>
+              </ul>
+            </article>
+            <article id="factsDetail" class="flow-detail">
+              <div><span>DATA</span><h3>Strukturovaná fakta</h3></div>
+              <ul>
+                <li>Každý fakt má typ, hodnotu, platnost a vazbu na pasáž zdroje.</li>
+                <li>AI extrakce je pouze kandidát, dokud neprojde validací.</li>
+                <li>Přepis hodnoty vytváří novou verzi, nemaže historii.</li>
+              </ul>
+            </article>
+            <article id="metricDetail" class="flow-detail">
+              <div><span>CODE</span><h3>Výpočet benchmarku</h3></div>
+              <ul>
+                <li>Vstupem jsou pouze validní strukturovaná fakta.</li>
+                <li>Metodika, váhy a verze výpočtu jsou uložené.</li>
+                <li>Stejný vstup a verze metodiky vždy dají stejný výsledek.</li>
+              </ul>
+            </article>
+            <article id="outputDetail" class="flow-detail">
+              <div><span>OUTPUT</span><h3>Dashboard a report</h3></div>
+              <ul>
+                <li>Read-only API poskytuje KPI, trend a citované podklady.</li>
+                <li>Report skládá pouze změny od posledního období.</li>
+                <li>Publikace reportu má explicitní lidské schválení.</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="component-grid">
+            <article>
+              <div class="component-head"><code>01</code><h3>Object storage</h3><span>MUST</span></div>
+              <p>Originální soubory, parsed text a případné exporty reportů.</p>
+              <small>S3 compatible storage na OCP</small>
+            </article>
+            <article>
+              <div class="component-head"><code>02</code><h3>PostgreSQL</h3><span>MUST</span></div>
+              <p>Metadata, fakta, taxonomie, metriky, runy a auditní záznamy.</p>
+              <small>Zdroj pravdy pro aplikaci</small>
+            </article>
+            <article>
+              <div class="component-head"><code>03</code><h3>Orchestrátor</h3><span>MUST</span></div>
+              <p>Plánování ingestu, retry, paralelizace a viditelnost chyb.</p>
+              <small>Argo Workflows nebo interní standard</small>
+            </article>
+            <article>
+              <div class="component-head"><code>04</code><h3>Backend API</h3><span>MUST</span></div>
+              <p>Čtení výsledků, správa taxonomie a schvalovací workflow.</p>
+              <small>Stateless služba</small>
+            </article>
+            <article>
+              <div class="component-head"><code>05</code><h3>OpenSearch</h3><span>SHOULD</span></div>
+              <p>Fulltextové dohledání pasáží a později retrieval pro AI.</p>
+              <small>V MVP lze odložit</small>
+            </article>
+            <article>
+              <div class="component-head"><code>06</code><h3>Model gateway</h3><span>LATER</span></div>
+              <p>Jednotné rozhraní na lokální model, limity, logování a verze promptů.</p>
+              <small>Není blokátor první fáze</small>
+            </article>
+          </div>
+        </section>
+
+        <section id="data">
+          <div class="section-title">
+            <span>02</span>
+            <div>
+              <h2>Minimální datový model</h2>
+              <p>Entity, bez kterých nepůjde zajistit historii a dohledatelnost.</p>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Entita</th>
+                  <th>Co obsahuje</th>
+                  <th>Proč ji potřebujeme</th>
+                  <th>Fáze</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>sources</code></td>
+                  <td>typ, adresa, vlastník, citlivost, ACL, frekvence</td>
+                  <td>konfigurace konektorů</td>
+                  <td><span class="phase mvp">MVP</span></td>
+                </tr>
+                <tr>
+                  <td><code>documents</code></td>
+                  <td>source ID, verze, hash, object path, stav, metadata</td>
+                  <td>historie a inkrementální zpracování</td>
+                  <td><span class="phase mvp">MVP</span></td>
+                </tr>
+                <tr>
+                  <td><code>document_sections</code></td>
+                  <td>text, pořadí, nadpis, token count, source offset</td>
+                  <td>citace a práce s dlouhým textem</td>
+                  <td><span class="phase mvp">MVP</span></td>
+                </tr>
+                <tr>
+                  <td><code>taxonomy</code></td>
+                  <td>oblast, produkt, fáze procesu, segment, kanál</td>
+                  <td>jednotné třídění napříč zdroji</td>
+                  <td><span class="phase mvp">MVP</span></td>
+                </tr>
+                <tr>
+                  <td><code>facts</code></td>
+                  <td>typ, hodnota, jednotka, platnost, confidence, stav</td>
+                  <td>vstup do benchmarku</td>
+                  <td><span class="phase mvp">MVP</span></td>
+                </tr>
+                <tr>
+                  <td><code>fact_evidence</code></td>
+                  <td>fact ID, section ID, přesná citace</td>
+                  <td>dohledatelnost tvrzení</td>
+                  <td><span class="phase mvp">MVP</span></td>
+                </tr>
+                <tr>
+                  <td><code>metric_definitions</code></td>
+                  <td>vzorec, váha, verze, valid from/to</td>
+                  <td>verzovaná metodika</td>
+                  <td><span class="phase mvp">MVP</span></td>
+                </tr>
+                <tr>
+                  <td><code>metric_values</code></td>
+                  <td>metric ID, subjekt, období, hodnota, input snapshot</td>
+                  <td>výsledky a časová řada</td>
+                  <td><span class="phase mvp">MVP</span></td>
+                </tr>
+                <tr>
+                  <td><code>pipeline_runs</code></td>
+                  <td>stav, timing, počty, chyba, verze workeru</td>
+                  <td>provoz a retry</td>
+                  <td><span class="phase mvp">MVP</span></td>
+                </tr>
+                <tr>
+                  <td><code>ai_runs</code></td>
+                  <td>model, prompt version, tokens, výstup, validace</td>
+                  <td>audit a měření přínosu AI</td>
+                  <td><span class="phase later">FÁZE 2</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="ai">
+          <div class="section-title">
+            <span>03</span>
+            <div>
+              <h2>Kde přesně použít AI</h2>
+              <p>AI worker je jeden krok pipeline. Systém musí fungovat i bez něj.</p>
+            </div>
+          </div>
+
+          <div class="two-columns">
+            <article class="boundary-card yes">
+              <header><span>ANO</span><h3>Úloha má pevný výstup</h3></header>
+              <div class="boundary-row">
+                <code>classify()</code>
+                <p>Zařadit dokument do existující taxonomie.</p>
+              </div>
+              <div class="boundary-row">
+                <code>extract()</code>
+                <p>Vrátit kandidátní fakta podle JSON Schema.</p>
+              </div>
+              <div class="boundary-row">
+                <code>compare()</code>
+                <p>Označit možné rozpory nebo změnu tvrzení.</p>
+              </div>
+              <div class="boundary-row">
+                <code>summarize_delta()</code>
+                <p>Navrhnout komentář pouze nad dodanými změnami.</p>
+              </div>
+            </article>
+            <article class="boundary-card no">
+              <header><span>NE</span><h3>Úloha nemá kontrolovatelný výstup</h3></header>
+              <div class="boundary-row">
+                <code>score_product()</code>
+                <p>Skóre musí vypočítat verzovaný kód.</p>
+              </div>
+              <div class="boundary-row">
+                <code>remember_all()</code>
+                <p>Model neslouží jako úložiště znalostí.</p>
+              </div>
+              <div class="boundary-row">
+                <code>read_everything()</code>
+                <p>Celý korpus se neposílá při každém běhu.</p>
+              </div>
+              <div class="boundary-row">
+                <code>decide()</code>
+                <p>Model nevydává finální produktové rozhodnutí.</p>
+              </div>
+            </article>
+          </div>
+
+          <div class="code-panel">
+            <div class="code-panel-head">
+              <span>Kontrakt AI extrakce</span>
+              <code>example</code>
+            </div>
+            <pre><code>{
+  "fact_type": "competitor.time_to_offer",
+  "subject": "bank_id",
+  "value": 2.5,
+  "unit": "day",
+  "valid_at": "2026-07-01",
+  "evidence": {
+    "section_id": "sec_0183",
+    "quote": "Nabídku obdržíte do 2,5 pracovního dne."
+  },
+  "confidence": 0.91
+}</code></pre>
+            <div class="code-note">
+              <strong>Důležité:</strong> validace schématu potvrzuje jen formát. Pravdivost
+              se ověřuje pravidly, vazbou na citaci a případně člověkem.
+            </div>
+          </div>
+        </section>
+
+        <section id="prace">
+          <div class="section-title">
+            <span>04</span>
+            <div>
+              <h2>Balíky práce</h2>
+              <p>Rozpad implementace podle závislostí, ne podle týmových prezentací.</p>
+            </div>
+          </div>
+
+          <div class="filter-bar">
+            <span>Zobrazit:</span>
+            <button class="filter active" data-filter="all" type="button">vše</button>
+            <button class="filter" data-filter="mvp" type="button">jen MVP</button>
+            <button class="filter" data-filter="later" type="button">po MVP</button>
+          </div>
+
+          <div class="work-list">
+            <details class="work-item" data-scope="mvp" open>
+              <summary>
+                <span class="work-number">01</span>
+                <div><h3>Definice benchmarku</h3><p>Taxonomie, KPI, váhy a rozhodovací otázky.</p></div>
+                <span class="size size-l">L</span>
+                <span class="phase mvp">MVP</span>
+                <i></i>
+              </summary>
+              <div class="work-body">
+                <div><strong>Implementovat</strong><ul><li>datový slovník</li><li>hierarchii taxonomie</li><li>definice metrik a vzorců</li><li>verzování metodiky</li></ul></div>
+                <div><strong>Hotovo, když</strong><ul><li>lze ručně vložit fakta</li><li>výpočet vrátí reprodukovatelný výsledek</li><li>každá metrika má vlastníka</li></ul></div>
+                <div><strong>Závislosti</strong><p>Produktový vlastník, analytik, vzorek reálných dat.</p></div>
+              </div>
+            </details>
+
+            <details class="work-item" data-scope="mvp">
+              <summary>
+                <span class="work-number">02</span>
+                <div><h3>Datový základ</h3><p>PostgreSQL, object storage, migrace a lokální vývoj.</p></div>
+                <span class="size size-m">M</span>
+                <span class="phase mvp">MVP</span>
+                <i></i>
+              </summary>
+              <div class="work-body">
+                <div><strong>Implementovat</strong><ul><li>DB schema + migrace</li><li>S3 klient a naming</li><li>seed taxonomie</li><li>dev compose / test setup</li></ul></div>
+                <div><strong>Hotovo, když</strong><ul><li>lze uložit verzi dokumentu</li><li>lze dohledat originál</li><li>integrační test běží v CI</li></ul></div>
+                <div><strong>Závislosti</strong><p>Výběr interních OCP služeb a pravidla retention.</p></div>
+              </div>
+            </details>
+
+            <details class="work-item" data-scope="mvp">
+              <summary>
+                <span class="work-number">03</span>
+                <div><h3>Ingest framework + první konektory</h3><p>Společný kontrakt a 2–3 prioritní zdroje.</p></div>
+                <span class="size size-l">L</span>
+                <span class="phase mvp">MVP</span>
+                <i></i>
+              </summary>
+              <div class="work-body">
+                <div><strong>Implementovat</strong><ul><li>connector interface</li><li>hashování a verze</li><li>retry + karanténa</li><li>Confluence a file import</li></ul></div>
+                <div><strong>Hotovo, když</strong><ul><li>druhý běh nestahuje nezměněná data</li><li>chyba jednoho zdroje nezastaví ostatní</li><li>ACL se neztratí</li></ul></div>
+                <div><strong>Závislosti</strong><p>Přístupy ke zdrojům, service accounts, síťová pravidla.</p></div>
+              </div>
+            </details>
+
+            <details class="work-item" data-scope="mvp">
+              <summary>
+                <span class="work-number">04</span>
+                <div><h3>Parsing a normalizace</h3><p>Text, tabulky, metadata, sekce a deduplikace.</p></div>
+                <span class="size size-l">L</span>
+                <span class="phase mvp">MVP</span>
+                <i></i>
+              </summary>
+              <div class="work-body">
+                <div><strong>Implementovat</strong><ul><li>HTML/PDF/DOCX parser</li><li>normalizaci textu</li><li>dělení podle sekcí</li><li>quality flags</li></ul></div>
+                <div><strong>Hotovo, když</strong><ul><li>citace ukazuje správné místo</li><li>stejný dokument nevzniká vícekrát</li><li>parser chyby jsou viditelné</li></ul></div>
+                <div><strong>Závislosti</strong><p>Reálný reprezentativní vzorek dokumentů.</p></div>
+              </div>
+            </details>
+
+            <details class="work-item" data-scope="mvp">
+              <summary>
+                <span class="work-number">05</span>
+                <div><h3>Benchmark engine</h3><p>Výpočet metrik, snapshot vstupů a historie.</p></div>
+                <span class="size size-l">L</span>
+                <span class="phase mvp">MVP</span>
+                <i></i>
+              </summary>
+              <div class="work-body">
+                <div><strong>Implementovat</strong><ul><li>validaci vstupních faktů</li><li>metric evaluator</li><li>versioned snapshots</li><li>přepočet období</li></ul></div>
+                <div><strong>Hotovo, když</strong><ul><li>výsledek je deterministický</li><li>lze vysvětlit vstupy metriky</li><li>změna vah nemaže starý výsledek</li></ul></div>
+                <div><strong>Závislosti</strong><p>Balík 01 a ručně připravená testovací data.</p></div>
+              </div>
+            </details>
+
+            <details class="work-item" data-scope="mvp">
+              <summary>
+                <span class="work-number">06</span>
+                <div><h3>Backend + jednoduchý dashboard</h3><p>Read API, KPI, změny, zdroje a provozní stav.</p></div>
+                <span class="size size-m">M</span>
+                <span class="phase mvp">MVP</span>
+                <i></i>
+              </summary>
+              <div class="work-body">
+                <div><strong>Implementovat</strong><ul><li>read-only endpointy</li><li>detail metriky a evidence</li><li>stav zdrojů a běhů</li><li>export reportu</li></ul></div>
+                <div><strong>Hotovo, když</strong><ul><li>uživatel dohledá původ čísla</li><li>vidí změnu proti období</li><li>pozná zastaralý zdroj</li></ul></div>
+                <div><strong>Závislosti</strong><p>Datový model a benchmark engine.</p></div>
+              </div>
+            </details>
+
+            <details class="work-item" data-scope="later">
+              <summary>
+                <span class="work-number">07</span>
+                <div><h3>AI extraction worker</h3><p>Model gateway, JSON Schema, evaluace a human review.</p></div>
+                <span class="size size-l">L</span>
+                <span class="phase later">FÁZE 2</span>
+                <i></i>
+              </summary>
+              <div class="work-body">
+                <div><strong>Implementovat</strong><ul><li>model adapter</li><li>prompt registry</li><li>structured output</li><li>eval dataset + scoring</li></ul></div>
+                <div><strong>Hotovo, když</strong><ul><li>splní práh přesnosti</li><li>každý fakt má evidence</li><li>lze jej vypnout bez dopadu na ingest</li></ul></div>
+                <div><strong>Závislosti</strong><p>Lokální model, inference kapacita a označená data.</p></div>
+              </div>
+            </details>
+
+            <details class="work-item" data-scope="later">
+              <summary>
+                <span class="work-number">08</span>
+                <div><h3>Hardening a širší provoz</h3><p>RBAC, audit, SLO, backup, další konektory.</p></div>
+                <span class="size size-m">M</span>
+                <span class="phase later">FÁZE 2</span>
+                <i></i>
+              </summary>
+              <div class="work-body">
+                <div><strong>Implementovat</strong><ul><li>end-to-end RBAC</li><li>monitoring a alerty</li><li>backup/restore test</li><li>load test a limity</li></ul></div>
+                <div><strong>Hotovo, když</strong><ul><li>provoz má runbook</li><li>obnova je otestovaná</li><li>ACL se ověřuje integračním testem</li></ul></div>
+                <div><strong>Závislosti</strong><p>Bankovní security a provozní standardy.</p></div>
+              </div>
+            </details>
+          </div>
+
+          <div class="legend">
+            <span><b class="size size-m">M</b> střední celek</span>
+            <span><b class="size size-l">L</b> velký / více neznámých</span>
+            <span>Velikost není časový odhad.</span>
+          </div>
+        </section>
+
+        <section id="mvp">
+          <div class="section-title">
+            <span>05</span>
+            <div>
+              <h2>Hranice prvního MVP</h2>
+              <p>Nejmenší verze, na které lze ověřit, že benchmark vůbec dává smysl.</p>
+            </div>
+          </div>
+
+          <div class="mvp-grid">
+            <article>
+              <h3>Vstupy</h3>
+              <ul>
+                <li>2–3 typy zdrojů</li>
+                <li>stovky dokumentů, ne celý archiv</li>
+                <li>ruční import jako bezpečný fallback</li>
+                <li>jedna sada přístupových práv</li>
+              </ul>
+            </article>
+            <article>
+              <h3>Funkce</h3>
+              <ul>
+                <li>inkrementální ingest</li>
+                <li>historie verzí a citace</li>
+                <li>10–20 metrik</li>
+                <li>trend proti minulému období</li>
+              </ul>
+            </article>
+            <article>
+              <h3>Výstup</h3>
+              <ul>
+                <li>jednoduchý interní dashboard</li>
+                <li>detail výpočtu každé metriky</li>
+                <li>stav a čerstvost zdrojů</li>
+                <li>export periodického reportu</li>
+              </ul>
+            </article>
+            <article>
+              <h3>Mimo MVP</h3>
+              <ul>
+                <li>chat a obecné dotazování</li>
+                <li>automatické produktové návrhy</li>
+                <li>real-time aktualizace</li>
+                <li>automatická publikace bez kontroly</li>
+              </ul>
+            </article>
+          </div>
+
+          <div class="acceptance">
+            <h3>MVP lze považovat za úspěšné, pokud:</h3>
+            <label><input type="checkbox" /> stejná data vždy vyrobí stejný benchmark</label>
+            <label><input type="checkbox" /> u každé hodnoty lze otevřít původní zdroj a citaci</label>
+            <label><input type="checkbox" /> druhý běh nezpracovává nezměněné dokumenty</label>
+            <label><input type="checkbox" /> chyba jednoho dokumentu nezastaví celou dávku</label>
+            <label><input type="checkbox" /> produktový člověk podle výstupu udělá alespoň jedno konkrétní rozhodnutí</label>
+          </div>
+        </section>
+
+        <section id="provoz">
+          <div class="section-title">
+            <span>06</span>
+            <div>
+              <h2>Nasazení na OCP</h2>
+              <p>Logické komponenty. Konkrétní produkty je potřeba sladit s lokálními standardy.</p>
+            </div>
+          </div>
+
+          <div class="deployment">
+            <div class="outside-zone">
+              <span class="zone-title">MIMO NAMESPACE</span>
+              <div class="deploy-box muted"><strong>Interní zdroje</strong><small>Confluence, DMS, API</small></div>
+              <div class="deploy-box muted"><strong>Veřejný internet</strong><small>pokud bude povolen</small></div>
+              <div class="deploy-box muted"><strong>Identity provider</strong><small>uživatelé + service accounts</small></div>
+            </div>
+            <div class="zone-arrow">↓</div>
+            <div class="ocp-zone">
+              <span class="zone-title">OCP NAMESPACE: HYPOBENCHMARK</span>
+              <div class="deploy-grid">
+                <div class="deploy-box"><strong>Orchestrator</strong><small>CronWorkflow / scheduler</small></div>
+                <div class="deploy-box"><strong>Ingest workers</strong><small>škálované batch joby</small></div>
+                <div class="deploy-box optional"><strong>AI worker</strong><small>GPU node · fáze 2</small></div>
+                <div class="deploy-box"><strong>Backend API</strong><small>stateless deployment</small></div>
+                <div class="deploy-box"><strong>Frontend</strong><small>static build / web server</small></div>
+                <div class="deploy-box"><strong>Monitoring</strong><small>metrics, logs, alerts</small></div>
+              </div>
+              <div class="stateful-row">
+                <div class="deploy-box stateful"><strong>PostgreSQL</strong><small>metadata + fakta + KPI</small></div>
+                <div class="deploy-box stateful"><strong>Object storage</strong><small>originály + parsed data</small></div>
+                <div class="deploy-box stateful optional"><strong>OpenSearch</strong><small>fulltext · lze odložit</small></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ops-grid">
+            <article><h3>Škálování</h3><p>Na daný objem stačí batch joby s omezenou concurrency. Kafka ani Spark nejsou potřeba.</p></article>
+            <article><h3>Tokeny</h3><p>Hash + cache + uložené fakty. Model dostane pouze nový text, nikdy celý archiv.</p></article>
+            <article><h3>Chyby</h3><p>Retry pro dočasné chyby, karanténa pro vadný dokument, žádné tiché přeskočení.</p></article>
+            <article><h3>Pozorovatelnost</h3><p>Počet dokumentů, změn, chyb, doba běhu, tokeny a přesnost AI extrakce.</p></article>
+          </div>
+        </section>
+
+        <section id="otazky">
+          <div class="section-title">
+            <span>07</span>
+            <div>
+              <h2>Co je potřeba zjistit</h2>
+              <p>Bez těchto odpovědí nelze návrh převést na konkrétní implementaci.</p>
+            </div>
+          </div>
+
+          <div class="questions">
+            <article>
+              <span class="priority blocking">BLOKUJE NÁVRH</span>
+              <h3>Jaké přesně budou první zdroje?</h3>
+              <p>Potřebujeme API, formáty, objemy, příklady, vlastníka, ACL a frekvenci změn.</p>
+              <code>owner: produkt + data</code>
+            </article>
+            <article>
+              <span class="priority blocking">BLOKUJE NÁVRH</span>
+              <h3>Jak se počítá benchmark?</h3>
+              <p>Seznam KPI, vstupní fakta, váhy, referenční hodnoty a zacházení s chybějícími daty.</p>
+              <code>owner: produkt + analytik</code>
+            </article>
+            <article>
+              <span class="priority important">PŘED IMPLEMENTACÍ</span>
+              <h3>Co už na OCP existuje?</h3>
+              <p>PostgreSQL operátor, S3, Argo, OpenSearch, CI/CD, secrets, monitoring a ingress.</p>
+              <code>owner: platform tým</code>
+            </article>
+            <article>
+              <span class="priority important">PŘED IMPLEMENTACÍ</span>
+              <h3>Smí namespace ven na internet?</h3>
+              <p>Pokud ne, veřejné zdroje potřebují oddělenou importní zónu nebo ruční import.</p>
+              <code>owner: security + síťaři</code>
+            </article>
+            <article>
+              <span class="priority later">PŘED AI PILOTEM</span>
+              <h3>Jaký lokální model je dostupný?</h3>
+              <p>Endpoint, context limit, structured output, throughput, GPU quota a provozní vlastník.</p>
+              <code>owner: AI/platform tým</code>
+            </article>
+            <article>
+              <span class="priority later">PŘED PRODUKCÍ</span>
+              <h3>Jak přenést ACL do výsledků?</h3>
+              <p>Výstup nesmí zpřístupnit fakt nebo citaci uživateli bez oprávnění ke zdroji.</p>
+              <code>owner: security + architekt</code>
+            </article>
+          </div>
+        </section>
+
+        <footer>
+          <p><strong>HypoBenchmark / technical draft</strong></p>
+          <p>Pracovní podklad pro diskusi implementace. Čísla a komponenty nejsou závazný odhad.</p>
+        </footer>
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
